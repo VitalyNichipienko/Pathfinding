@@ -58,7 +58,7 @@ public class PathFinding : MonoBehaviour
         {
             for(int j = 0; j < yDimension; j++)
             {
-                GameObject obj = Instantiate(prefab, new Vector3(i, 1, j), Quaternion.identity);
+                GameObject obj = Instantiate(prefab, new Vector3(i, 0, j), Quaternion.identity);
                 int random = UnityEngine.Random.Range(0, 2);
                 points[i, j] = new Point(random, obj);
             }
