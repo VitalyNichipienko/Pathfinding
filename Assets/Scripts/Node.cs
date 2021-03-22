@@ -6,15 +6,32 @@ public class Node
 {
     #region Fields
 
-    public Vector3 currentPosition;
-    public Vector3 targetPosition;
-
     public Node previousNode;
 
-    public int F;  // F = G + H
-    public int G;  // Distance from start to node
-    public int H;  // Distance from node to target
-    public int Hm; // Heuristic multiplier
+    #endregion
+
+
+
+    #region Properties
+
+    public HashSet<Node> Neighbours { get; private set; }
+
+
+    public GameObject Position { get; private set; }
+
+    public int Value { get; private set; } // Heuristic multiplier
+
+
+    public float G { get; private set; }   // Distance from start to node
+
+
+    public float H { get; private set; }   // Distance from node to target
+
+
+    public float Weight { get; private set; }   // F = G + H
+
+
+    public virtual bool IsLocked => false;
 
     #endregion
 
@@ -22,17 +39,31 @@ public class Node
 
     #region Ctor
 
-    public Node(int g, int value, Vector3 currentPosition, Vector3 targetPosition, Node previousNode)
+    public Node(int value, GameObject position)
+    {
+        Neighbours = new HashSet<Node>();
+
+        Value = value;
+        Position = position;
+    }
+
+    #endregion
+
+
+
+    #region Methods
+
+    public void SetNodeWeight(float g, float h)
     {
         G = g;
-        this.currentPosition = currentPosition;
-        this.targetPosition = targetPosition;
-        this.previousNode = previousNode;
-        Hm = value;
+        H = h;
 
-        H = (int)(Mathf.Abs(this.targetPosition.x - this.currentPosition.x) + Mathf.Abs(this.targetPosition.z - this.currentPosition.z));
-        F = G + H * Hm;
+        Weight = G + H;
     }
+
+
+    //public void ClearNodeWeight() =>
+    //    Weight = G = H = 0;
 
     #endregion
 }

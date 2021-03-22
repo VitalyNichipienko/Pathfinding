@@ -1,21 +1,24 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class PathFinding : MonoBehaviour
 {
     #region Fields
 
-    public List<Vector3> pathTotarget;
-    private List<Node> ChekedNodes = new List<Node>();
-    private List<Node> WaitingNodes = new List<Node>();
+    [Range(0, 100)] public int xDimension;
+    [Range(0, 100)] public int yDimension;
 
-    public GameObject Target;
-    public GameObject pointPrefab;
-    private GameObject[,] points;
+    public Node[,] Cells { get; private set; }
 
-    public int dimension;
+    public Point[,] points;
+    public GameObject prefab;
+
+    private HashSet<Node> openSet;
+    private HashSet<Node> closedSet;
+
+    private float heuristicMultiplayer;      
 
     private LineRenderer line;
 
@@ -23,116 +26,283 @@ public class PathFinding : MonoBehaviour
 
 
 
+    #region Enum
+
+    public enum HeuristicFunction : byte
+    {
+        None = 0,
+        ManhattanDistance = 1,
+        ClassicDistance = 2
+    }
+    private static HeuristicFunction heuristicFunction;
+
+    #endregion
+
+
+
     #region Methods
 
-    private void Start()
+    void Start()
     {
-        points = new GameObject[dimension, dimension];
-        Generator();
-        Target = points[dimension - 1, dimension - 1];
-        pathTotarget = GetPath(Target.transform.position);
-        CreateCurve();
+        points = new Point[xDimension, yDimension];
+
+        MatrixGenerator();
+        RunTest();
+
     }
 
-    private void CreateCurve()
+
+    private void MatrixGenerator()
     {
-        line = gameObject.AddComponent<LineRenderer>();
-        line.material = new Material(Shader.Find("Sprites/Default"));
-        line.startColor = Color.green;
-        line.endColor = Color.red;
-        line.widthMultiplier = 0.1f;
-        line.positionCount = points.Length;
-        for(int i = 0; i < pathTotarget.Count; i++)
+        for (int i = 0; i < xDimension; i++)
         {
-            line.SetPosition(i, pathTotarget[i]);
-        }
-    }
-
-    public List<Vector3> GetPath(Vector3 target)
-    {
-        pathTotarget = new List<Vector3>();
-
-        var startPostion = new Vector3(Mathf.Round(transform.position.x), 0, Mathf.Round(transform.position.z));
-        var targetPostion = new Vector3(Mathf.Round(Target.transform.position.x), 0, Mathf.Round(Target.transform.position.z));
-
-        if(startPostion == targetPostion)
-        {
-            return pathTotarget;
-        }
-
-        Node startNode = new Node(0, Random.Range(0,10), startPostion, targetPostion, null);
-        ChekedNodes.Add(startNode);
-        WaitingNodes.AddRange(GetNeighboringNodes(startNode));
-
-        while (WaitingNodes.Count > 0)
-        {
-            Node nodeToCheck = WaitingNodes.Where(x => x.F == WaitingNodes.Min(y => y.F)).FirstOrDefault();
-
-            if (nodeToCheck.currentPosition == targetPostion)
+            for(int j = 0; j < yDimension; j++)
             {
-                return CalculatePathFromNode(nodeToCheck);
-            }
-
-            WaitingNodes.Remove(nodeToCheck);
-
-            if (!ChekedNodes.Where(x => x.currentPosition == nodeToCheck.currentPosition).Any())
-            {
-                ChekedNodes.Add(nodeToCheck);
-                WaitingNodes.AddRange(GetNeighboringNodes(nodeToCheck));
+                GameObject obj2 = Instantiate(prefab, new Vector3(i, 1, j), Quaternion.identity);
+                int random = UnityEngine.Random.Range(0, 2);
+                points[i, j] = new Point(random, obj2);
             }
         }
-
-        return pathTotarget;
     }
 
-    //private void OnDrawGizmos()
-    //{
-    //    foreach(var item in ChekedNodes)
-    //    {
-    //        Gizmos.color = Color.green;
-    //        Gizmos.DrawSphere(new Vector3(item.currentPosition.x, 1f, item.currentPosition.z), 0.2f);
-    //    }
-    //}
 
-    public List<Vector3> CalculatePathFromNode(Node node)
+    private void RunTest()
     {
-        var path = new List<Vector3>();
-        Node currentNode = node;
+        Initialize(points);
 
-        while(currentNode.previousNode != null)
+        List<Node> path = FindPath();
+
+        if (path == null)
         {
-            path.Add(new Vector3(currentNode.currentPosition.x, 0, currentNode.currentPosition.z));
+            return;
+        }
+
+        CreateResultCurve(path);
+
+        ShowResultCost(path);
+
+        ShowResultPath(path);
+    }
+
+
+    public void Initialize(Point[,] inputPoints,
+                                float _heuristicMultiplayer = 0.5f,
+                                HeuristicFunction _heuristicFunction = HeuristicFunction.ClassicDistance)
+    {
+        heuristicMultiplayer = _heuristicMultiplayer;
+        heuristicFunction = _heuristicFunction;
+
+
+        int xLength = inputPoints.GetLength(0);
+        int yLength = inputPoints.GetLength(1);
+
+
+        Cells = new Node[xLength, yLength];
+
+        openSet = new HashSet<Node>();
+        closedSet = new HashSet<Node>();
+
+        for (int x = 0; x < xLength; x++)
+        {
+            for (int y = 0; y < yLength; y++)
+            {
+                Node node = new Node(inputPoints[x, y].cell, inputPoints[x, y].pointObject);
+
+                if (x > 0)
+                {
+                    CreateNeighborhood(node, Cells[x - 1, y]);
+                }
+
+                if (y > 0)
+                {
+                    CreateNeighborhood(node, Cells[x, y - 1]);
+                }
+
+                Cells[x, y] = node;
+            }
+        }
+
+        void CreateNeighborhood(Node first, Node second)
+        {
+            first.Neighbours.Add(second);
+            second.Neighbours.Add(first);
+        }
+    }
+
+
+    private List<Node> FindPath()
+    {
+        int xLength = Cells.GetLength(0);
+        int yLength = Cells.GetLength(1);
+
+
+        Node start = Cells[0, 0];
+        Node end = Cells[xLength - 1, yLength - 1];
+
+        if (TryFindPath(start, end, out List<Node> path))
+        {
+            return path;
+        }
+        else
+        {
+            Debug.Log($"Unable to find a path from point startPoint to point endPoint.");
+
+            return default;
+        }
+    }
+
+
+    private bool TryFindPath(Node from, Node to, out List<Node> path)
+    {
+        path = default;
+
+        from.SetNodeWeight(0, GetHeuristicPathLength(from, to));
+
+        Node currentNode = from;
+
+        openSet.Add(from);
+
+        while (openSet.Count > 0)
+        {
+            if (currentNode.Position == to.Position)
+            {
+                path = GetFinalPathForNode(currentNode, true);
+                return true;
+            }
+
+            CalculateNeighboursWeight(currentNode, to);
+
+            closedSet.Add(currentNode);
+            openSet.Remove(currentNode);
+
+            currentNode = FindNodeWithMinWeight();
+        }
+
+        return false;
+    }
+
+
+    private static List<Node> GetFinalPathForNode(Node targetNode, bool isReversed)
+    {
+        List<Node> result = new List<Node>();
+
+        Node currentNode = targetNode;
+
+        while (currentNode != null)
+        {
+            result.Add(currentNode);
             currentNode = currentNode.previousNode;
         }
 
-        return path;
-    }
-
-    private List<Node> GetNeighboringNodes(Node node)
-    {
-        var neighboringNodes = new List<Node>();
-
-        neighboringNodes.Add(new Node(node.G + 1, Random.Range(0, 10), new Vector3(node.currentPosition.x + 1, 0, node.currentPosition.z), node.targetPosition, node));
-        neighboringNodes.Add(new Node(node.G + 1, Random.Range(0, 10), new Vector3(node.currentPosition.x - 1, 0, node.currentPosition.z), node.targetPosition, node));
-        neighboringNodes.Add(new Node(node.G + 1, Random.Range(0, 10), new Vector3(node.currentPosition.x, 0, node.currentPosition.z + 1), node.targetPosition, node));
-        neighboringNodes.Add(new Node(node.G + 1, Random.Range(0, 10), new Vector3(node.currentPosition.x, 0, node.currentPosition.z - 1), node.targetPosition, node));
-
-        return neighboringNodes;
-    }
-
-    private void Generator()
-    {
-        for(int i = 0; i < dimension; i++)
+        if (isReversed)
         {
-            for(int j = 0; j < dimension; j++)
-            {
-                points[i, j] = Instantiate(pointPrefab, new Vector3(i, 0, j), Quaternion.identity) as GameObject;
+            result.Reverse();
+        }
 
-                //GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere); 
-                //sphere.transform.position = new Vector3(i, 0, j);
+        return result;
+    }
+
+
+    private Node FindNodeWithMinWeight()
+    {
+        Node minNode = null;
+
+        foreach (Node node in openSet)
+        {
+            if (minNode == null || node.Weight < minNode.Weight)
+            {
+                minNode = node;
+            }
+        }
+
+        return minNode;
+    }
+
+
+    private void CalculateNeighboursWeight(Node current, Node target)
+    {
+        foreach (Node node in current.Neighbours)
+        {
+            if (!node.IsLocked &&
+                !closedSet.Contains(node) &&
+                !openSet.Contains(node))
+            {
+                float g = current.G + CalculateStepCost(node, current);
+                float h = GetHeuristicPathLength(current, target);
+
+                node.SetNodeWeight(g, h);
+
+                node.previousNode = current;
+
+                openSet.Add(node);
             }
         }
     }
 
+
+    private float GetHeuristicPathLength(Node from, Node to)
+    {
+        float result = 0.0f;
+
+        switch (heuristicFunction)
+        {
+            case HeuristicFunction.ManhattanDistance:
+                result = Math.Abs(to.Position.transform.position.x - from.Position.transform.position.x) +
+                         Math.Abs(to.Position.transform.position.z - from.Position.transform.position.z);
+                break;
+
+            case HeuristicFunction.ClassicDistance:
+                result = (float)Math.Sqrt(Math.Pow(to.Position.transform.position.x - from.Position.transform.position.x, 2) +
+                                          Math.Pow(to.Position.transform.position.z - from.Position.transform.position.z, 2));
+                break;
+
+            default:
+                Debug.LogWarning($"This type ({heuristicFunction}) of heuristic function is not supported.");
+                break;
+        }
+
+        return result * heuristicMultiplayer;
+    }
+
+
+    private int CalculateStepCost(Node from, Node to) =>
+        from.Value ^ to.Value;
+
+
+    private void CreateResultCurve(List<Node> path)
+    {
+        line = gameObject.AddComponent<LineRenderer>();
+        line.material = new Material(Shader.Find("Sprites/Default"));
+        line.startColor = Color.red;
+        line.endColor = Color.green;
+        line.widthMultiplier = 0.2f;
+        line.positionCount = path.Count;
+
+        for (int i = 0; i < path.Count; i++)
+        {
+            line.SetPosition(i, path[i].Position.transform.position);
+        }
+    }
+
+
+    private void ShowResultCost(List<Node> path) =>
+     Debug.Log($"Cost: {path[path.Count - 1].G}");
+
+
+    private void ShowResultPath(List<Node> path)
+    {
+        const string arrowString = " -> ";
+
+        string result = string.Empty;
+
+        foreach (Node node in path)
+        {
+            result += $"[{node.Position.transform.position.x}, {node.Position.transform.position.z}] {arrowString}";
+        }
+
+        result = result.Remove(result.Length - arrowString.Length, arrowString.Length);
+
+        Debug.Log($"Path: {result}");
+    }
     #endregion
 }

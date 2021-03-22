@@ -388,10 +388,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 520dff8a5af60b846a88c34fec265cba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  pathTotarget: []
-  Target: {fileID: 0}
-  pointPrefab: {fileID: 9033425647965134553, guid: 092abbcf610129b4da3d5c0ac5a80c09, type: 3}
-  dimension: 4
+  xDimension: 15
+  yDimension: 15
+  prefab: {fileID: 9033425647965134553, guid: 092abbcf610129b4da3d5c0ac5a80c09, type: 3}
 --- !u!4 &1664080050
 Transform:
   m_ObjectHideFlags: 0

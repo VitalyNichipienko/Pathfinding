@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Point : MonoBehaviour
-{
+{ 
     #region Fields
 
-    public int X;
-    public int Z;
+    public int cell;
+
+    public GameObject pointObject;
 
     #endregion
 
@@ -15,10 +16,10 @@ public class Point : MonoBehaviour
 
     #region Ctor
 
-    public Point(int x, int z)
+    public Point(int value, GameObject obj)
     {
-        X = x;
-        Z = z;
+        cell = value;
+        pointObject = obj;
     }
 
     #endregion
