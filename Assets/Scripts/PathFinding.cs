@@ -20,20 +20,6 @@ public class PathFinding : MonoBehaviour
 
     private float heuristicMultiplayer;      
 
-    private LineRenderer line;
-
-    #endregion
-
-
-
-    #region Enum
-
-    public enum HeuristicFunction : byte
-    {
-        None = 0,
-        ManhattanDistance = 1,
-        ClassicDistance = 2
-    }
     private static HeuristicFunction heuristicFunction;
 
     #endregion
@@ -48,7 +34,6 @@ public class PathFinding : MonoBehaviour
 
         MatrixGenerator();
         RunTest();
-
     }
 
 
@@ -77,7 +62,8 @@ public class PathFinding : MonoBehaviour
             return;
         }
 
-        CreateResultCurve(path);
+        ResultCurve curve = FindObjectOfType<ResultCurve>();
+        curve.DrawResultCurve(path);
 
         ShowResultCost(path);
 
@@ -269,22 +255,6 @@ public class PathFinding : MonoBehaviour
         from.Value ^ to.Value;
 
 
-    private void CreateResultCurve(List<Node> path)
-    {
-        line = gameObject.AddComponent<LineRenderer>();
-        line.material = new Material(Shader.Find("Sprites/Default"));
-        line.startColor = Color.red;
-        line.endColor = Color.green;
-        line.widthMultiplier = 0.2f;
-        line.positionCount = path.Count;
-
-        for (int i = 0; i < path.Count; i++)
-        {
-            line.SetPosition(i, path[i].Position.transform.position);
-        }
-    }
-
-
     private void ShowResultCost(List<Node> path) =>
      Debug.Log($"Cost: {path[path.Count - 1].G}");
 
@@ -304,5 +274,6 @@ public class PathFinding : MonoBehaviour
 
         Debug.Log($"Path: {result}");
     }
+
     #endregion
 }

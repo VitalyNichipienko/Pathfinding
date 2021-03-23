@@ -19,6 +19,7 @@ public class Node
 
     public GameObject Position { get; private set; }
 
+
     public int Value { get; private set; } // Heuristic multiplier
 
 
@@ -60,10 +61,6 @@ public class Node
 
         Weight = G + H;
     }
-
-
-    //public void ClearNodeWeight() =>
-    //    Weight = G = H = 0;
 
     #endregion
 }
