@@ -10,8 +10,6 @@ public class PathFinding : MonoBehaviour
     [Range(0, 100)] public int xDimension;
     [Range(0, 100)] public int yDimension;
 
-    public Node[,] Cells { get; private set; }
-
     public Point[,] points;
     public GameObject prefab;
 
@@ -20,7 +18,15 @@ public class PathFinding : MonoBehaviour
 
     private float heuristicMultiplayer;      
 
-    private static HeuristicFunction heuristicFunction;
+    private HeuristicFunction heuristicFunction;
+
+    #endregion
+
+
+
+    #region Properties
+
+    public Node[,] Cells { get; private set; }
 
     #endregion
 
@@ -168,7 +174,7 @@ public class PathFinding : MonoBehaviour
     }
 
 
-    private static List<Node> GetFinalPathForNode(Node targetNode, bool isReversed)
+    private List<Node> GetFinalPathForNode(Node targetNode, bool isReversed)
     {
         List<Node> result = new List<Node>();
 
