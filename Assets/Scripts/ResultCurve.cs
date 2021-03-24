@@ -6,7 +6,7 @@ public class ResultCurve : MonoBehaviour
 {
     #region Fields
 
-    private LineRenderer _line;
+    private LineRenderer line;
 
     #endregion
 
@@ -16,16 +16,16 @@ public class ResultCurve : MonoBehaviour
 
     public void DrawResultCurve(List<Node> path)
     {
-        _line = gameObject.AddComponent<LineRenderer>();
-        _line.material = new Material(Shader.Find("Sprites/Default"));
-        _line.startColor = Color.red;
-        _line.endColor = Color.green;
-        _line.widthMultiplier = 0.2f;
-        _line.positionCount = path.Count;
+        line = gameObject.AddComponent<LineRenderer>();
+        line.material = new Material(Shader.Find("Sprites/Default"));
+        line.startColor = Color.red;
+        line.endColor = Color.green;
+        line.widthMultiplier = 0.2f;
+        line.positionCount = path.Count;
 
         for (int i = 0; i < path.Count; i++)
         {
-            _line.SetPosition(i, path[i].Position.transform.position);
+            line.SetPosition(i, path[i].Position.transform.position);
         }
     }
 
